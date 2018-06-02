@@ -27,7 +27,7 @@ type Controller struct {
 }
 
 type Processer struct {
-	Agr         *param.Agr
+	Agr         param.Agr
 	Client      *ethclient.Client
 	Addresses   []common.Address
 	Topics      []string
@@ -37,8 +37,15 @@ type Processer struct {
 
 func NewConcotrller(agrs []param.Agr) (*Controller, error) {
 	controller := Controller{}
+	opt := option.WithCredentialsFile(param.Conf.CredsFile)
+	ctx := context.Background()
+	pubsubClient, err := pubsub.NewClient(ctx, param.Conf.ProjectId, opt)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
 	for _, agr := range agrs {
-		processer, err := NewProcesser(&agr)
+		processer, err := NewProcesser(agr, pubsubClient)
 		if err != nil {
 			log.Println(err)
 			return nil, err
@@ -54,7 +61,7 @@ func (controller *Controller) Process() {
 	}
 }
 
-func NewProcesser(agr *param.Agr) (*Processer, error) {
+func NewProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*Processer, error) {
 	processer := Processer{}
 	processer.Agr = agr
 	client, err := ethclient.Dial(agr.ChainNetwork)
@@ -83,25 +90,21 @@ func NewProcesser(agr *param.Agr) (*Processer, error) {
 	}
 	processer.Abi = abiIns
 
-	opt := option.WithCredentialsFile(param.Conf.CredsFile)
-	ctx := context.Background()
-	pubsubClient, err := pubsub.NewClient(ctx, param.Conf.ProjectId, opt)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	topic, err := pubsubClient.CreateTopic(context.Background(), agr.PubsubName)
+	pubsubTopic, err := pubsubClient.CreateTopic(context.Background(), agr.PubsubName)
 	if err != nil {
 		log.Println(err)
 	} else {
-		processer.PubsubTopic = topic
+		processer.PubsubTopic = pubsubTopic
 	}
 
 	return &processer, nil
 }
 
 func (processer *Processer) Process() (error) {
+	log.Println("contract address", processer.Agr.ContractAddress)
 	for _, event := range processer.Agr.Events {
+		log.Println("event name", event)
+
 		contractLogs := ethereumLogsDao.GetByFilter(processer.Agr.ContractAddress, event)
 		q := ethereum.FilterQuery{}
 		q.Addresses = processer.Addresses
