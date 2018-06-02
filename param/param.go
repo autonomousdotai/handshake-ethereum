@@ -9,10 +9,10 @@ import (
 
 var Conf Config
 
-var PAYABLE = "payable"
-var CROWDSALE = "crowdsale"
-var CRYPTOSIGN = "cryptosign"
-var STRUCTS = map[string]map[string]interface{}{}
+var CONTRACT_PAYABLE = "payable"
+var CONTRACT_CROWDSALE = "crowdsale"
+var CONTRACT_CRYPTOSIGN = "cryptosign"
+var ABI_STRUCTS = map[string]map[string]interface{}{}
 
 func Initialize(confFile string) {
 	file, err := os.Open(confFile)
@@ -27,12 +27,12 @@ func Initialize(confFile string) {
 	}
 	Conf = conf
 
-	STRUCTS[PAYABLE] = map[string]interface{}{}
-	STRUCTS[CROWDSALE] = map[string]interface{}{}
-	STRUCTS[CRYPTOSIGN] = map[string]interface{}{}
+	ABI_STRUCTS[CONTRACT_PAYABLE] = map[string]interface{}{}
+	ABI_STRUCTS[CONTRACT_CROWDSALE] = map[string]interface{}{}
+	ABI_STRUCTS[CONTRACT_CRYPTOSIGN] = map[string]interface{}{}
 
-	//crowdsale
-	STRUCTS[CROWDSALE]["__init"] = struct {
+	//crowdsale conf
+	ABI_STRUCTS[CONTRACT_CROWDSALE]["__init"] = struct {
 		Hid      *big.Int `json:"hid"`
 		State    uint8    `json:"state"`
 		Offchain [32]byte `json:"offchain"`
@@ -40,7 +40,7 @@ func Initialize(confFile string) {
 		1,
 		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	}
-	STRUCTS[CROWDSALE]["__shake"] = struct {
+	ABI_STRUCTS[CONTRACT_CROWDSALE]["__shake"] = struct {
 		Hid      *big.Int `json:"hid"`
 		State    uint8    `json:"state"`
 		Balance  *big.Int `json:"balance"`
@@ -50,7 +50,7 @@ func Initialize(confFile string) {
 		big.NewInt(1),
 		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	}
-	STRUCTS[CROWDSALE]["__unshake"] = struct {
+	ABI_STRUCTS[CONTRACT_CROWDSALE]["__unshake"] = struct {
 		Hid      *big.Int `json:"hid"`
 		State    uint8    `json:"state"`
 		Balance  *big.Int `json:"balance"`
@@ -60,7 +60,7 @@ func Initialize(confFile string) {
 		big.NewInt(1),
 		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	}
-	STRUCTS[CROWDSALE]["__cancel"] = struct {
+	ABI_STRUCTS[CONTRACT_CROWDSALE]["__cancel"] = struct {
 		Hid      *big.Int `json:"hid"`
 		State    uint8    `json:"state"`
 		Offchain [32]byte `json:"offchain"`
@@ -68,7 +68,7 @@ func Initialize(confFile string) {
 		1,
 		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	}
-	STRUCTS[CROWDSALE]["__stop"] = struct {
+	ABI_STRUCTS[CONTRACT_CROWDSALE]["__stop"] = struct {
 		Hid      *big.Int `json:"hid"`
 		State    uint8    `json:"state"`
 		Offchain [32]byte `json:"offchain"`
@@ -76,7 +76,7 @@ func Initialize(confFile string) {
 		1,
 		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	}
-	STRUCTS[CROWDSALE]["__refund"] = struct {
+	ABI_STRUCTS[CONTRACT_CROWDSALE]["__refund"] = struct {
 		Hid      *big.Int `json:"hid"`
 		State    uint8    `json:"state"`
 		Offchain [32]byte `json:"offchain"`
@@ -84,12 +84,55 @@ func Initialize(confFile string) {
 		1,
 		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	}
-	STRUCTS[CROWDSALE]["__withdraw"] = struct {
+	ABI_STRUCTS[CONTRACT_CROWDSALE]["__withdraw"] = struct {
 		Hid      *big.Int `json:"hid"`
 		State    uint8    `json:"state"`
 		Offchain [32]byte `json:"offchain"`
 	}{big.NewInt(1),
 		1,
+		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	}
+	//payable conf
+	ABI_STRUCTS[CONTRACT_PAYABLE]["__init"] = struct {
+		Hid      *big.Int `json:"hid"`
+		Offchain [32]byte `json:"offchain"`
+	}{big.NewInt(1),
+		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	}
+	ABI_STRUCTS[CONTRACT_PAYABLE]["__shake"] = struct {
+		Hid      *big.Int `json:"hid"`
+		Offchain [32]byte `json:"offchain"`
+	}{big.NewInt(1),
+		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	}
+	ABI_STRUCTS[CONTRACT_PAYABLE]["__deliver"] = struct {
+		Hid      *big.Int `json:"hid"`
+		Offchain [32]byte `json:"offchain"`
+	}{big.NewInt(1),
+		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	}
+	ABI_STRUCTS[CONTRACT_PAYABLE]["__cancel"] = struct {
+		Hid      *big.Int `json:"hid"`
+		Offchain [32]byte `json:"offchain"`
+	}{big.NewInt(1),
+		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	}
+	ABI_STRUCTS[CONTRACT_PAYABLE]["__reject"] = struct {
+		Hid      *big.Int `json:"hid"`
+		Offchain [32]byte `json:"offchain"`
+	}{big.NewInt(1),
+		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	}
+	ABI_STRUCTS[CONTRACT_PAYABLE]["__accept"] = struct {
+		Hid      *big.Int `json:"hid"`
+		Offchain [32]byte `json:"offchain"`
+	}{big.NewInt(1),
+		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	}
+	ABI_STRUCTS[CONTRACT_PAYABLE]["__withdraw"] = struct {
+		Hid      *big.Int `json:"hid"`
+		Offchain [32]byte `json:"offchain"`
+	}{big.NewInt(1),
 		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	}
 }

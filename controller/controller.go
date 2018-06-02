@@ -116,7 +116,7 @@ func (processer *Processer) Process() (error) {
 			log.Println(err)
 			return err
 		}
-		allTructs := param.STRUCTS[processer.Agr.Contract]
+		allTructs := param.ABI_STRUCTS[processer.Agr.Contract]
 		for _, logE := range logs {
 			hash := logE.TxHash.String()
 			outptr := reflect.New(reflect.TypeOf(allTructs[event]))
