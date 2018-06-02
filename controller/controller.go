@@ -12,12 +12,12 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"context"
 	"reflect"
-	"../models"
-	"../dao"
+	"github.com/autonomousdotai/handshake-ethereum/models"
+	"github.com/autonomousdotai/handshake-ethereum/dao"
 	"math/big"
 	"google.golang.org/api/option"
 	"cloud.google.com/go/pubsub"
-	"../param"
+	"github.com/autonomousdotai/handshake-ethereum/param"
 )
 
 var ethereumLogsDao = dao.EthereumLogsDao{}

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"./controller"
-	"./param"
+	"github.com/autonomousdotai/handshake-ethereum/controller"
+	"github.com/autonomousdotai/handshake-ethereum/param"
 	"log"
 	"github.com/robfig/cron"
 	"os"

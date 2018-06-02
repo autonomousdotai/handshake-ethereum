@@ -1,7 +1,7 @@
 package dao
 
 import (
-	"../models"
+	"github.com/autonomousdotai/handshake-ethereum/models"
 	"log"
 	"github.com/jinzhu/gorm"
 	"time"
