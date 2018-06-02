@@ -13,6 +13,7 @@ var CONTRACT_PAYABLE = "payable"
 var CONTRACT_CROWDSALE = "crowdsale"
 var CONTRACT_CRYPTOSIGN = "cryptosign"
 var ABI_STRUCTS = map[string]map[string]interface{}{}
+var ABI_FILES = map[string]string{}
 
 func Initialize(confFile string) {
 	file, err := os.Open(confFile)
@@ -26,6 +27,10 @@ func Initialize(confFile string) {
 		log.Println(err)
 	}
 	Conf = conf
+
+	ABI_FILES[CONTRACT_PAYABLE] = "./abi/payable.abi"
+	ABI_FILES[CONTRACT_CROWDSALE] = "./abi/crowdsale.abi"
+	ABI_FILES[CONTRACT_CRYPTOSIGN] = "./abi/cryptosign.abi"
 
 	ABI_STRUCTS[CONTRACT_PAYABLE] = map[string]interface{}{}
 	ABI_STRUCTS[CONTRACT_CROWDSALE] = map[string]interface{}{}
@@ -147,7 +152,6 @@ type Config struct {
 type Agr struct {
 	ChainId         int      `json:"chain_id"`
 	ChainNetwork    string   `json:"chain_network"`
-	AbiFile         string   `json:"abi_file"`
 	Contract        string   `json:"contract"`
 	ContractAddress string   `json:"contract_address"`
 	Events          []string `json:"events"`

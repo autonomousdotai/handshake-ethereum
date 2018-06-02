@@ -6,7 +6,6 @@
     {
       "chain_id": 0,
       "chain_network": "",
-      "abi_file": "",
       "contract": "",
       "contract_address": "",
       "events": [

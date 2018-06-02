@@ -66,7 +66,7 @@ func NewProcesser(agr *param.Agr) (*Processer, error) {
 	processer.Addresses = []common.Address{
 		common.HexToAddress(agr.ContractAddress),
 	}
-	path, err := filepath.Abs(agr.AbiFile)
+	path, err := filepath.Abs(param.ABI_FILES[agr.Contract])
 	if err != nil {
 		log.Println(err)
 		return nil, err
