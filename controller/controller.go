@@ -104,7 +104,7 @@ func NewProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*Processer, error
 func (processer *Processer) Process() (error) {
 	log.Println("contract address", processer.Agr.ContractAddress)
 	for _, event := range processer.Agr.Events {
-		log.Println("event name", event)
+		log.Println("process for event ", event)
 
 		contractLogs := ethereumLogsDao.GetByFilter(processer.Agr.ContractAddress, event)
 		q := ethereum.FilterQuery{}
