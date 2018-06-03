@@ -58,7 +58,7 @@ func NewConcotrller(agrs []param.Agr) (*Controller, error) {
 
 func (controller *Controller) Process() {
 	for _, processer := range controller.Processers {
-		processer.Process()
+		go processer.Process()
 	}
 }
 
@@ -192,7 +192,7 @@ func (processer *Processer) MakeData(event string, source interface{}) (map[stri
 func (processer *Processer) SaveDB(chainId int, address string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (error) {
 	jsonStr, err := json.Marshal(data)
 	if err != nil {
-		log.Println(err)
+		log.Println("json.Marshal(data)", err)
 		return err
 	}
 	ethereumLogs := models.EthereumLogs{}
@@ -204,7 +204,11 @@ func (processer *Processer) SaveDB(chainId int, address string, event string, bl
 	ethereumLogs.Hash = hash
 	ethereumLogs.Data = string(jsonStr)
 
-	ethereumLogsDao.Create(ethereumLogs, nil)
+	ethereumLogs, err = ethereumLogsDao.Create(ethereumLogs, nil)
+	if err != nil {
+		log.Println("ethereumLogsDao.Create", err)
+		return err
+	}
 
 	return nil
 }
@@ -219,7 +223,7 @@ func (processer *Processer) PubSub(chainId int, address string, event string, bl
 	pubsubData["data"] = data
 	jsonStr, err := json.Marshal(pubsubData)
 	if err != nil {
-		log.Println(err)
+		log.Println("json.Marshal(pubsubData)", err)
 		return err
 	}
 	log.Println(string(jsonStr))
