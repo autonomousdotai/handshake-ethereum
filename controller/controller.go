@@ -120,10 +120,10 @@ func (processer *Processer) Process() (error) {
 			log.Println(err)
 			return err
 		}
-		allTructs := param.ABI_STRUCTS[processer.Agr.Contract]
+		abiStructs := param.ABI_STRUCTS[processer.Agr.Contract]
 		for _, logE := range logs {
 			hash := logE.TxHash.String()
-			val, ok := allTructs[event]
+			val, ok := abiStructs[event]
 			if !ok {
 				log.Println(errors.New("event " + event + " struct is missed"))
 				break
