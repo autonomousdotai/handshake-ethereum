@@ -115,21 +115,21 @@ func (processer *Processer) Process() (error) {
 		}
 		q.ToBlock = nil
 		q.Topics = [][]common.Hash{[]common.Hash{processer.Abi.Events[event].Id()}}
-		logs, err := processer.Client.FilterLogs(context.Background(), q)
+		etherLogs, err := processer.Client.FilterLogs(context.Background(), q)
 		if err != nil {
 			log.Println(err)
 			return err
 		}
 		abiStructs := param.ABI_STRUCTS[processer.Agr.Contract]
-		for _, logE := range logs {
-			hash := logE.TxHash.String()
+		for _, etherLog := range etherLogs {
+			hash := etherLog.TxHash.String()
 			val, ok := abiStructs[event]
 			if !ok {
 				log.Println(errors.New("event " + event + " struct is missed"))
 				break
 			}
 			outptr := reflect.New(reflect.TypeOf(val))
-			err = processer.Abi.Unpack(outptr.Interface(), event, logE.Data)
+			err = processer.Abi.Unpack(outptr.Interface(), event, etherLog.Data)
 			if err != nil {
 				if err != nil {
 					log.Println(err)
@@ -141,8 +141,8 @@ func (processer *Processer) Process() (error) {
 					log.Println(err)
 					break
 				}
-				go processer.SaveDB(processer.Agr.ChainId, processer.Agr.ContractAddress, event, int64(logE.BlockNumber), int64(logE.Index), hash, data)
-				go processer.PubSub(processer.Agr.ChainId, processer.Agr.ContractAddress, event, int64(logE.BlockNumber), int64(logE.Index), hash, data)
+				go processer.SaveDB(processer.Agr.ChainId, processer.Agr.ContractAddress, event, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
+				go processer.PubSub(processer.Agr.ChainId, processer.Agr.ContractAddress, event, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
 			}
 		}
 	}
