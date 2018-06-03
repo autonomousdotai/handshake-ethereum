@@ -21,7 +21,9 @@ import (
 	"errors"
 )
 
-var ethereumLogsDao = dao.EthereumLogsDao{}
+var (
+	ethereumLogsDao = dao.EthereumLogsDao{}
+)
 
 type Controller struct {
 	Processers []*Processer
@@ -39,8 +41,7 @@ type Processer struct {
 func NewConcotrller(agrs []param.Agr) (*Controller, error) {
 	controller := Controller{}
 	opt := option.WithCredentialsFile(param.Conf.CredsFile)
-	ctx := context.Background()
-	pubsubClient, err := pubsub.NewClient(ctx, param.Conf.ProjectId, opt)
+	pubsubClient, err := pubsub.NewClient(context.Background(), param.Conf.ProjectId, opt)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -67,7 +68,7 @@ func NewProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*Processer, error
 	processer.Agr = agr
 	client, err := ethclient.Dial(agr.ChainNetwork)
 	if err != nil {
-		log.Println("error:", err)
+		log.Println("NewProcesser", err)
 		return nil, err
 	}
 	processer.Client = client
@@ -76,24 +77,24 @@ func NewProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*Processer, error
 	}
 	path, err := filepath.Abs(param.ABI_FILES[agr.Contract])
 	if err != nil {
-		log.Println(err)
+		log.Println("NewProcesser", err)
 		return nil, err
 	}
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Println(err)
+		log.Println("NewProcesser", err)
 		return nil, err
 	}
 	abiIns, err := abi.JSON(strings.NewReader(string(file)))
 	if err != nil {
-		log.Println(err)
+		log.Println("NewProcesser", err)
 		return nil, err
 	}
 	processer.Abi = abiIns
 
 	pubsubTopic, err := pubsubClient.CreateTopic(context.Background(), agr.PubsubName)
 	if err != nil {
-		log.Println(err)
+		log.Println("NewProcesser", err)
 	} else {
 		processer.PubsubTopic = pubsubTopic
 	}
@@ -104,7 +105,7 @@ func NewProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*Processer, error
 func (processer *Processer) Process() (error) {
 	log.Println("contract address", processer.Agr.ContractAddress)
 	for _, event := range processer.Agr.Events {
-		log.Println("process for event ", event)
+		log.Println("Processer.Process() for event ", event)
 
 		contractLogs := ethereumLogsDao.GetByFilter(processer.Agr.ContractAddress, event)
 		q := ethereum.FilterQuery{}
@@ -117,7 +118,7 @@ func (processer *Processer) Process() (error) {
 		q.Topics = [][]common.Hash{[]common.Hash{processer.Abi.Events[event].Id()}}
 		etherLogs, err := processer.Client.FilterLogs(context.Background(), q)
 		if err != nil {
-			log.Println(err)
+			log.Println("Processer.Process()", err)
 			return err
 		}
 		abiStructs := param.ABI_STRUCTS[processer.Agr.Contract]
@@ -133,13 +134,13 @@ func (processer *Processer) Process() (error) {
 			err = processer.Abi.Unpack(outptr.Interface(), event, etherLog.Data)
 			if err != nil {
 				if err != nil {
-					log.Println(err)
+					log.Println("Processer.Process()", err)
 					break
 				}
 			} else {
 				data, err := processer.MakeData(event, outptr.Interface())
 				if err != nil {
-					log.Println(err)
+					log.Println("Processer.Process()", err)
 					break
 				}
 				go processer.SaveDB(processer.Agr.ChainId, "", processer.Agr.ContractAddress, event, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
@@ -155,19 +156,19 @@ func (processer *Processer) MakeData(event string, source interface{}) (map[stri
 
 	jsonStr, err := json.Marshal(source)
 	if err != nil {
-		log.Println(err)
+		log.Println("Processer.MakeData()", err)
 		return result, err
 	}
 	err = json.Unmarshal(jsonStr, &result)
 	if err != nil {
-		log.Println(err)
+		log.Println("Processer.MakeData()", err)
 		return result, err
 	}
 
 	for k, v := range result {
 		switch v.(type) {
 		default:
-			log.Println("unexpected type %T", v)
+			log.Println("Processer.MakeData() unexpected type pos 1 %T", v)
 			break
 		case float64:
 			result[k] = int64(v.(float64))
@@ -176,6 +177,9 @@ func (processer *Processer) MakeData(event string, source interface{}) (map[stri
 			str := ""
 			for _, i := range v.([]interface{}) {
 				switch i.(type) {
+				default:
+					log.Println("Processer.MakeData() unexpected type pos 2 %T", v)
+					break
 				case float64:
 					str += string([]byte{byte(i.(float64))})
 					break
@@ -193,7 +197,7 @@ func (processer *Processer) MakeData(event string, source interface{}) (map[stri
 func (processer *Processer) SaveDB(chainId int, fromAddress string, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (error) {
 	jsonStr, err := json.Marshal(data)
 	if err != nil {
-		log.Println("json.Marshal(data)", err)
+		log.Println("Processer.SaveDB()", err)
 		return err
 	}
 	ethereumLogs := models.EthereumLogs{}
@@ -207,7 +211,7 @@ func (processer *Processer) SaveDB(chainId int, fromAddress string, contractAddr
 
 	ethereumLogs, err = ethereumLogsDao.Create(ethereumLogs, nil)
 	if err != nil {
-		log.Println("ethereumLogsDao.Create", err)
+		log.Println("Processer.SaveDB()", err)
 		return err
 	}
 
@@ -226,7 +230,7 @@ func (processer *Processer) PubSub(chainId int, fromAddress string, contractAddr
 	pubsubData["data"] = data
 	jsonStr, err := json.Marshal(pubsubData)
 	if err != nil {
-		log.Println("json.Marshal(pubsubData)", err)
+		log.Println("Processer.PubSub()", err)
 		return err
 	}
 	log.Println(string(jsonStr))
