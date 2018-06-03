@@ -18,7 +18,7 @@ import (
 	"google.golang.org/api/option"
 	"cloud.google.com/go/pubsub"
 	"github.com/autonomousdotai/handshake-ethereum/param"
-	"github.com/pkg/errors"
+	"errors"
 )
 
 var ethereumLogsDao = dao.EthereumLogsDao{}
