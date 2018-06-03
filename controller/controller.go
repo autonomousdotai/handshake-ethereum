@@ -208,12 +208,12 @@ func (processer *Processer) ProcessData(chainId int, contractAddress string, eve
 	res, err := processer.PubSub(processer.Agr.ChainId, fromAddress, processer.Agr.ContractAddress, event, blockNumber, logIndex, hash, data)
 	if err != nil {
 		log.Println("Processer.ProcessData()", err)
+		return err
 	}
 	if res != nil && ethereumLogs.ID > 0 {
 		serverID, err := res.Get(context.Background())
 		if err != nil {
 			log.Println("Processer.ProcessData()", err)
-			return nil
 		}
 		ethereumLogs.PubsubMsgId = serverID
 		ethereumLogs, err = ethereumLogsDao.Update(ethereumLogs, nil)
