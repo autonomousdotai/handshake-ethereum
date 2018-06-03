@@ -18,6 +18,7 @@ import (
 	"google.golang.org/api/option"
 	"cloud.google.com/go/pubsub"
 	"github.com/autonomousdotai/handshake-ethereum/param"
+	"github.com/pkg/errors"
 )
 
 var ethereumLogsDao = dao.EthereumLogsDao{}
@@ -122,18 +123,23 @@ func (processer *Processer) Process() (error) {
 		allTructs := param.ABI_STRUCTS[processer.Agr.Contract]
 		for _, logE := range logs {
 			hash := logE.TxHash.String()
-			outptr := reflect.New(reflect.TypeOf(allTructs[event]))
+			val, ok := allTructs[event]
+			if !ok {
+				log.Println(errors.New("event " + event + " struct is missed"))
+				break
+			}
+			outptr := reflect.New(reflect.TypeOf(val))
 			err = processer.Abi.Unpack(outptr.Interface(), event, logE.Data)
 			if err != nil {
 				if err != nil {
 					log.Println(err)
-					continue
+					break
 				}
 			} else {
 				data, err := processer.MakeData(event, outptr.Interface())
 				if err != nil {
 					log.Println(err)
-					continue
+					break
 				}
 				go processer.SaveDB(processer.Agr.ChainId, processer.Agr.ContractAddress, event, int64(logE.BlockNumber), int64(logE.Index), hash, data)
 				go processer.PubSub(processer.Agr.ChainId, processer.Agr.ContractAddress, event, int64(logE.BlockNumber), int64(logE.Index), hash, data)
