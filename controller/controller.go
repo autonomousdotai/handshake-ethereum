@@ -123,6 +123,7 @@ func (processer *Processer) Process() (error) {
 		abiStructs := param.ABI_STRUCTS[processer.Agr.Contract]
 		for _, etherLog := range etherLogs {
 			hash := etherLog.TxHash.String()
+
 			val, ok := abiStructs[event]
 			if !ok {
 				log.Println(errors.New("event " + event + " struct is missed"))
@@ -141,8 +142,8 @@ func (processer *Processer) Process() (error) {
 					log.Println(err)
 					break
 				}
-				go processer.SaveDB(processer.Agr.ChainId, processer.Agr.ContractAddress, event, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
-				go processer.PubSub(processer.Agr.ChainId, processer.Agr.ContractAddress, event, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
+				go processer.SaveDB(processer.Agr.ChainId, "", processer.Agr.ContractAddress, event, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
+				go processer.PubSub(processer.Agr.ChainId, "", processer.Agr.ContractAddress, event, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
 			}
 		}
 	}
@@ -189,7 +190,7 @@ func (processer *Processer) MakeData(event string, source interface{}) (map[stri
 	return result, nil
 }
 
-func (processer *Processer) SaveDB(chainId int, address string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (error) {
+func (processer *Processer) SaveDB(chainId int, fromAddress string, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (error) {
 	jsonStr, err := json.Marshal(data)
 	if err != nil {
 		log.Println("json.Marshal(data)", err)
@@ -197,7 +198,7 @@ func (processer *Processer) SaveDB(chainId int, address string, event string, bl
 	}
 	ethereumLogs := models.EthereumLogs{}
 	ethereumLogs.ChainId = chainId
-	ethereumLogs.Address = address
+	ethereumLogs.ContractAddress = contractAddress
 	ethereumLogs.Event = event
 	ethereumLogs.BlockNumber = blockNumber
 	ethereumLogs.LogIndex = logIndex
@@ -213,9 +214,11 @@ func (processer *Processer) SaveDB(chainId int, address string, event string, bl
 	return nil
 }
 
-func (processer *Processer) PubSub(chainId int, address string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (error) {
+func (processer *Processer) PubSub(chainId int, fromAddress string, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (error) {
 	pubsubData := map[string]interface{}{}
-	pubsubData["address"] = address
+	pubsubData["chain_id"] = chainId
+	pubsubData["from_address"] = fromAddress
+	pubsubData["contract_address"] = contractAddress
 	pubsubData["event"] = event
 	pubsubData["block_number"] = blockNumber
 	pubsubData["log_index"] = logIndex

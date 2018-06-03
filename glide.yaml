@@ -1,7 +1,0 @@
-package: github.com/autonomousdotai/handshake-ethereum
-import:
-- package: github.com/jinzhu/gorm
-- package: github.com/go-sql-driver/mysql
-- package: cloud.google.com/go/pubsub
-- package: github.com/robfig/cron
-- package: github.com/ethereum/go-ethereum

@@ -19,9 +19,9 @@ func (contractLogsDao EthereumLogsDao) GetById(id int64) (models.EthereumLogs) {
 	return dto
 }
 
-func (contractLogsDao EthereumLogsDao) GetByFilter(address string, event string) (models.EthereumLogs) {
+func (contractLogsDao EthereumLogsDao) GetByFilter(contractAddress string, event string) (models.EthereumLogs) {
 	dto := models.EthereumLogs{}
-	err := models.Database().Where("address = ? AND event = ?", address, event).Order("block_number desc").First(&dto).Error
+	err := models.Database().Where("contract_address = ? AND event = ?", contractAddress, event).Order("block_number desc").First(&dto).Error
 	if err != nil {
 		log.Print(err)
 	}

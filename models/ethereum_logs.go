@@ -8,16 +8,17 @@ import (
 )
 
 type EthereumLogs struct {
-	DateCreated  time.Time
-	DateModified time.Time
-	ID           int64
-	ChainId      int
-	Address      string
-	Event        string
-	BlockNumber  int64
-	LogIndex     int64
-	Hash         string
-	Data         string
+	DateCreated     time.Time
+	DateModified    time.Time
+	ID              int64
+	ChainId         int
+	FromAddress     string
+	ContractAddress string
+	Event           string
+	BlockNumber     int64
+	LogIndex        int64
+	Hash            string
+	Data            string
 }
 
 func (EthereumLogs) TableName() string {
