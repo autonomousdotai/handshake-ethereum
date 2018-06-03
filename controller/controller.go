@@ -143,8 +143,7 @@ func (processer *Processer) Process() (error) {
 					log.Println("Processer.Process()", err)
 					break
 				}
-				go processer.SaveDB(processer.Agr.ChainId, "", processer.Agr.ContractAddress, event, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
-				go processer.PubSub(processer.Agr.ChainId, "", processer.Agr.ContractAddress, event, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
+				go processer.ProcessData(processer.Agr.ChainId, processer.Agr.ContractAddress, event, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
 			}
 		}
 	}
@@ -194,14 +193,52 @@ func (processer *Processer) MakeData(event string, source interface{}) (map[stri
 	return result, nil
 }
 
-func (processer *Processer) SaveDB(chainId int, fromAddress string, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (error) {
+func (processer *Processer) ProcessData(chainId int, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (error) {
+	fromAddress := ""
+	transaction, _, err := processer.Client.TransactionByHash(context.Background(), common.HexToHash(hash))
+	if err != nil {
+		log.Println("Processer.ProcessData()", err)
+	} else {
+		fromAddress = transaction.From().String()
+	}
+	ethereumLogs, err := processer.SaveDB(processer.Agr.ChainId, fromAddress, processer.Agr.ContractAddress, event, blockNumber, logIndex, hash, data)
+	if err != nil {
+		log.Println("Processer.ProcessData()", err)
+	}
+	res, err := processer.PubSub(processer.Agr.ChainId, fromAddress, processer.Agr.ContractAddress, event, blockNumber, logIndex, hash, data)
+	if err != nil {
+		log.Println("Processer.ProcessData()", err)
+	}
+	if res != nil && ethereumLogs.ID > 0 {
+		serverID, err := res.Get(context.Background())
+		if err != nil {
+			log.Println("Processer.ProcessData()", err)
+			return nil
+		}
+		ethereumLogs.PubsubMsgId = serverID
+		ethereumLogs, err = ethereumLogsDao.Update(ethereumLogs, nil)
+		if err != nil {
+			log.Println("Processer.ProcessData()", err)
+			return nil
+		}
+	}
+	return nil
+}
+
+func (processer *Processer) SaveDB(chainId int, fromAddress string, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (models.EthereumLogs, error) {
+	ethereumLogs := models.EthereumLogs{}
+
 	jsonStr, err := json.Marshal(data)
 	if err != nil {
 		log.Println("Processer.SaveDB()", err)
-		return err
+		return ethereumLogs, err
 	}
-	ethereumLogs := models.EthereumLogs{}
+	fromAddress = strings.ToLower(fromAddress)
+	contractAddress = strings.ToLower(contractAddress)
+	hash = strings.ToLower(hash)
+
 	ethereumLogs.ChainId = chainId
+	ethereumLogs.FromAddress = fromAddress
 	ethereumLogs.ContractAddress = contractAddress
 	ethereumLogs.Event = event
 	ethereumLogs.BlockNumber = blockNumber
@@ -212,13 +249,17 @@ func (processer *Processer) SaveDB(chainId int, fromAddress string, contractAddr
 	ethereumLogs, err = ethereumLogsDao.Create(ethereumLogs, nil)
 	if err != nil {
 		log.Println("Processer.SaveDB()", err)
-		return err
+		return ethereumLogs, err
 	}
 
-	return nil
+	return ethereumLogs, nil
 }
 
-func (processer *Processer) PubSub(chainId int, fromAddress string, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (error) {
+func (processer *Processer) PubSub(chainId int, fromAddress string, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (*pubsub.PublishResult, error) {
+	fromAddress = strings.ToLower(fromAddress)
+	contractAddress = strings.ToLower(contractAddress)
+	hash = strings.ToLower(hash)
+
 	pubsubData := map[string]interface{}{}
 	pubsubData["chain_id"] = chainId
 	pubsubData["from_address"] = fromAddress
@@ -231,12 +272,12 @@ func (processer *Processer) PubSub(chainId int, fromAddress string, contractAddr
 	jsonStr, err := json.Marshal(pubsubData)
 	if err != nil {
 		log.Println("Processer.PubSub()", err)
-		return err
+		return nil, err
 	}
 	log.Println(string(jsonStr))
 	if processer.PubsubTopic != nil {
 		res := processer.PubsubTopic.Publish(context.Background(), &pubsub.Message{Data: jsonStr})
-		log.Println(res)
+		return res, nil
 	}
-	return nil
+	return nil, nil
 }

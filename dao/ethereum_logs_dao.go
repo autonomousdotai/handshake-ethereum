@@ -5,6 +5,7 @@ import (
 	"log"
 	"github.com/jinzhu/gorm"
 	"time"
+	"strings"
 )
 
 type EthereumLogsDao struct {
@@ -20,6 +21,7 @@ func (contractLogsDao EthereumLogsDao) GetById(id int64) (models.EthereumLogs) {
 }
 
 func (contractLogsDao EthereumLogsDao) GetByFilter(contractAddress string, event string) (models.EthereumLogs) {
+	contractAddress = strings.ToLower(contractAddress)
 	dto := models.EthereumLogs{}
 	err := models.Database().Where("contract_address = ? AND event = ?", contractAddress, event).Order("block_number desc").First(&dto).Error
 	if err != nil {
@@ -32,6 +34,9 @@ func (contractLogsDao EthereumLogsDao) Create(dto models.EthereumLogs, tx *gorm.
 	if tx == nil {
 		tx = models.Database()
 	}
+	dto.FromAddress = strings.ToLower(dto.FromAddress)
+	dto.ContractAddress = strings.ToLower(dto.ContractAddress)
+	dto.Hash = strings.ToLower(dto.Hash)
 	dto.DateCreated = time.Now()
 	dto.DateModified = dto.DateCreated
 	err := tx.Create(&dto).Error
@@ -46,6 +51,9 @@ func (contractLogsDao EthereumLogsDao) Update(dto models.EthereumLogs, tx *gorm.
 	if tx == nil {
 		tx = models.Database()
 	}
+	dto.FromAddress = strings.ToLower(dto.FromAddress)
+	dto.ContractAddress = strings.ToLower(dto.ContractAddress)
+	dto.Hash = strings.ToLower(dto.Hash)
 	dto.DateModified = time.Now()
 	err := tx.Save(&dto).Error
 	if err != nil {

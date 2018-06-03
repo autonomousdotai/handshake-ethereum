@@ -19,6 +19,7 @@ type EthereumLogs struct {
 	LogIndex        int64
 	Hash            string
 	Data            string
+	PubsubMsgId     string
 }
 
 func (EthereumLogs) TableName() string {

@@ -1,0 +1,14 @@
+//github.com/ethereum/go-ethereum/core/types
+package types
+
+import (
+	"github.com/ethereum/go-ethereum/common"
+)
+
+func (tx *Transaction) From() *common.Address {
+	if tx.data.Recipient == nil {
+		return nil
+	}
+	from := tx.from.Load().(sigCache).from
+	return &from
+}
