@@ -20,6 +20,16 @@ func (contractLogsDao EthereumTransactionsDao) GetById(id int64) (models.Ethereu
 	return dto
 }
 
+func (contractLogsDao EthereumTransactionsDao) GetByHash(hash string) (models.EthereumTransactions) {
+	hash = strings.ToLower(hash)
+	dto := models.EthereumTransactions{}
+	err := models.Database().Where("hash = ?", hash).First(&dto).Error
+	if err != nil {
+		log.Print(err)
+	}
+	return dto
+}
+
 func (contractLogsDao EthereumTransactionsDao) GetByFilter(contractAddress string, event string) (models.EthereumTransactions) {
 	contractAddress = strings.ToLower(contractAddress)
 	dto := models.EthereumTransactions{}

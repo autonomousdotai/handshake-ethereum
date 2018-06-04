@@ -287,3 +287,13 @@ func (processer *LogsProcesser) PubSub(chainId int, fromAddress string, contract
 	}
 	return nil, nil
 }
+
+func CreateEthereumTransaction(ethTransReq models.EthereumTransactions) (models.EthereumTransactions, error) {
+	ethTrans := ethereumTransactionsDao.GetByHash(ethTransReq.Hash)
+	if ethTrans.ID > 0 {
+		return ethTrans, nil
+	}
+	ethTransReq.Status = -1
+	ethTrans, err := ethereumTransactionsDao.Create(ethTransReq, nil)
+	return ethTrans, err
+}
