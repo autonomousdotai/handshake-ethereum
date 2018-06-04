@@ -102,6 +102,25 @@ func serviceApp() error {
 			context.JSON(http.StatusOK, result)
 		})
 		index.POST("/tx", func(context *gin.Context) {
+
+			userId, ok := context.Get("UserId")
+			if !ok {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "user is not logged in",
+				}
+				context.JSON(http.StatusOK, result)
+				return
+			}
+			if userId.(int64) <= 0 {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "user is not logged in",
+				}
+				context.JSON(http.StatusOK, result)
+				return
+			}
+
 			ethTrans := new(models.EthereumTransactions)
 			err := context.Bind(&ethTrans)
 			if err != nil {
@@ -112,7 +131,7 @@ func serviceApp() error {
 				context.JSON(http.StatusOK, result)
 				return
 			}
-
+			ethTrans.UserId = userId.(int64)
 			_, err = controller.CreateEthereumTransaction(*ethTrans)
 			if err != nil {
 				result := map[string]interface{}{
