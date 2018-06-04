@@ -125,7 +125,7 @@ func serviceApp() error {
 
 			result := map[string]interface{}{
 				"status":  1,
-				"message": "Ethereum Service API",
+				"message": "OK",
 			}
 			context.JSON(http.StatusOK, result)
 		})
