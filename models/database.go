@@ -3,7 +3,7 @@ package models
 import (
 	"github.com/jinzhu/gorm"
 	"log"
-	"github.com/autonomousdotai/handshake-ethereum/param"
+	"github.com/ninjadotorg/handshake-ethereum/param"
 )
 
 var databaseConn *gorm.DB = nil

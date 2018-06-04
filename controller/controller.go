@@ -12,12 +12,12 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"context"
 	"reflect"
-	"github.com/autonomousdotai/handshake-ethereum/models"
-	"github.com/autonomousdotai/handshake-ethereum/dao"
+	"github.com/ninjadotorg/handshake-ethereum/models"
+	"github.com/ninjadotorg/handshake-ethereum/dao"
 	"math/big"
 	"google.golang.org/api/option"
 	"cloud.google.com/go/pubsub"
-	"github.com/autonomousdotai/handshake-ethereum/param"
+	"github.com/ninjadotorg/handshake-ethereum/param"
 	"errors"
 )
 
