@@ -92,9 +92,14 @@ func NewProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*Processer, error
 	}
 	processer.Abi = abiIns
 
-	pubsubTopic, err := pubsubClient.CreateTopic(context.Background(), agr.PubsubName)
-	if err != nil {
-		log.Println("NewProcesser", err)
+	pubsubTopic := pubsubClient.Topic(agr.PubsubName)
+	if pubsubTopic == nil || pubsubTopic.ID() != agr.PubsubName {
+		pubsubTopic, err := pubsubClient.CreateTopic(context.Background(), agr.PubsubName)
+		if err != nil {
+			log.Println("NewProcesser", err)
+		} else {
+			processer.PubsubTopic = pubsubTopic
+		}
 	} else {
 		processer.PubsubTopic = pubsubTopic
 	}
