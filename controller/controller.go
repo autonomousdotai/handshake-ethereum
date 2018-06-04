@@ -22,14 +22,15 @@ import (
 )
 
 var (
-	ethereumLogsDao = dao.EthereumLogsDao{}
+	ethereumLogsDao         = dao.EthereumLogsDao{}
+	ethereumTransactionsDao = dao.EthereumTransactionsDao{}
 )
 
 type Controller struct {
-	Processers []*Processer
+	LogsProcessers []*LogsProcesser
 }
 
-type Processer struct {
+type LogsProcesser struct {
 	Agr         param.Agr
 	Client      *ethclient.Client
 	Addresses   []common.Address
@@ -47,28 +48,28 @@ func NewConcotrller(agrs []param.Agr) (*Controller, error) {
 		return nil, err
 	}
 	for _, agr := range agrs {
-		processer, err := NewProcesser(agr, pubsubClient)
+		processer, err := NewLogsProcesser(agr, pubsubClient)
 		if err != nil {
 			log.Println(err)
 			return nil, err
 		}
-		controller.Processers = append(controller.Processers, processer)
+		controller.LogsProcessers = append(controller.LogsProcessers, processer)
 	}
 	return &controller, nil
 }
 
 func (controller *Controller) Process() {
-	for _, processer := range controller.Processers {
+	for _, processer := range controller.LogsProcessers {
 		go processer.Process()
 	}
 }
 
-func NewProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*Processer, error) {
-	processer := Processer{}
+func NewLogsProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*LogsProcesser, error) {
+	processer := LogsProcesser{}
 	processer.Agr = agr
 	client, err := ethclient.Dial(agr.ChainNetwork)
 	if err != nil {
-		log.Println("NewProcesser", err)
+		log.Println("NewLogsProcesser", err)
 		return nil, err
 	}
 	processer.Client = client
@@ -77,17 +78,17 @@ func NewProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*Processer, error
 	}
 	path, err := filepath.Abs(param.ABI_FILES[agr.Contract])
 	if err != nil {
-		log.Println("NewProcesser", err)
+		log.Println("NewLogsProcesser", err)
 		return nil, err
 	}
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Println("NewProcesser", err)
+		log.Println("NewLogsProcesser", err)
 		return nil, err
 	}
 	abiIns, err := abi.JSON(strings.NewReader(string(file)))
 	if err != nil {
-		log.Println("NewProcesser", err)
+		log.Println("NewLogsProcesser", err)
 		return nil, err
 	}
 	processer.Abi = abiIns
@@ -96,7 +97,7 @@ func NewProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*Processer, error
 	if pubsubTopic == nil || pubsubTopic.ID() != agr.PubsubName {
 		pubsubTopic, err := pubsubClient.CreateTopic(context.Background(), agr.PubsubName)
 		if err != nil {
-			log.Println("NewProcesser", err)
+			log.Println("NewLogsProcesser", err)
 		} else {
 			processer.PubsubTopic = pubsubTopic
 		}
@@ -107,10 +108,10 @@ func NewProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*Processer, error
 	return &processer, nil
 }
 
-func (processer *Processer) Process() (error) {
+func (processer *LogsProcesser) Process() (error) {
 	log.Println("contract address", processer.Agr.ContractAddress)
 	for _, event := range processer.Agr.Events {
-		log.Println("Processer.Process() for event ", event)
+		log.Println("LogsProcesser.Process() for event ", event)
 
 		contractLogs := ethereumLogsDao.GetByFilter(processer.Agr.ContractAddress, event)
 		q := ethereum.FilterQuery{}
@@ -123,7 +124,7 @@ func (processer *Processer) Process() (error) {
 		q.Topics = [][]common.Hash{[]common.Hash{processer.Abi.Events[event].Id()}}
 		etherLogs, err := processer.Client.FilterLogs(context.Background(), q)
 		if err != nil {
-			log.Println("Processer.Process()", err)
+			log.Println("LogsProcesser.Process()", err)
 			return err
 		}
 		abiStructs := param.ABI_STRUCTS[processer.Agr.Contract]
@@ -139,13 +140,13 @@ func (processer *Processer) Process() (error) {
 			err = processer.Abi.Unpack(outptr.Interface(), event, etherLog.Data)
 			if err != nil {
 				if err != nil {
-					log.Println("Processer.Process()", err)
+					log.Println("LogsProcesser.Process()", err)
 					break
 				}
 			} else {
 				data, err := processer.MigrateData(event, outptr.Interface())
 				if err != nil {
-					log.Println("Processer.Process()", err)
+					log.Println("LogsProcesser.Process()", err)
 					break
 				}
 				go processer.ProcessMessage(processer.Agr.ChainId, processer.Agr.ContractAddress, event, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
@@ -155,24 +156,24 @@ func (processer *Processer) Process() (error) {
 	return nil
 }
 
-func (processer *Processer) MigrateData(event string, source interface{}) (map[string]interface{}, error) {
+func (processer *LogsProcesser) MigrateData(event string, source interface{}) (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 
 	jsonStr, err := json.Marshal(source)
 	if err != nil {
-		log.Println("Processer.MigrateData()", err)
+		log.Println("LogsProcesser.MigrateData()", err)
 		return result, err
 	}
 	err = json.Unmarshal(jsonStr, &result)
 	if err != nil {
-		log.Println("Processer.MigrateData()", err)
+		log.Println("LogsProcesser.MigrateData()", err)
 		return result, err
 	}
 
 	for k, v := range result {
 		switch v.(type) {
 		default:
-			log.Println("Processer.MigrateData() unexpected type pos 1 %T", v)
+			log.Println("LogsProcesser.MigrateData() unexpected type pos 1 %T", v)
 			break
 		case float64:
 			result[k] = int64(v.(float64))
@@ -182,7 +183,7 @@ func (processer *Processer) MigrateData(event string, source interface{}) (map[s
 			for _, i := range v.([]interface{}) {
 				switch i.(type) {
 				default:
-					log.Println("Processer.MigrateData() unexpected type pos 2 %T", v)
+					log.Println("LogsProcesser.MigrateData() unexpected type pos 2 %T", v)
 					break
 				case float64:
 					str += string([]byte{byte(i.(float64))})
@@ -198,44 +199,44 @@ func (processer *Processer) MigrateData(event string, source interface{}) (map[s
 	return result, nil
 }
 
-func (processer *Processer) ProcessMessage(chainId int, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (error) {
+func (processer *LogsProcesser) ProcessMessage(chainId int, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (error) {
 	fromAddress := ""
 	transaction, _, err := processer.Client.TransactionByHash(context.Background(), common.HexToHash(hash))
 	if err != nil {
-		log.Println("Processer.ProcessMessage()", err)
+		log.Println("LogsProcesser.ProcessMessage()", err)
 	} else {
 		fromAddress = transaction.From().String()
 	}
 	ethereumLogs, err := processer.SaveDB(processer.Agr.ChainId, fromAddress, processer.Agr.ContractAddress, event, blockNumber, logIndex, hash, data)
 	if err != nil {
-		log.Println("Processer.ProcessMessage()", err)
+		log.Println("LogsProcesser.ProcessMessage()", err)
 	}
 	res, err := processer.PubSub(processer.Agr.ChainId, fromAddress, processer.Agr.ContractAddress, event, blockNumber, logIndex, hash, data)
 	if err != nil {
-		log.Println("Processer.ProcessMessage()", err)
+		log.Println("LogsProcesser.ProcessMessage()", err)
 		return err
 	}
 	if res != nil && ethereumLogs.ID > 0 {
 		serverID, err := res.Get(context.Background())
 		if err != nil {
-			log.Println("Processer.ProcessMessage()", err)
+			log.Println("LogsProcesser.ProcessMessage()", err)
 		}
 		ethereumLogs.PubsubMsgId = serverID
 		ethereumLogs, err = ethereumLogsDao.Update(ethereumLogs, nil)
 		if err != nil {
-			log.Println("Processer.ProcessMessage()", err)
+			log.Println("LogsProcesser.ProcessMessage()", err)
 			return nil
 		}
 	}
 	return nil
 }
 
-func (processer *Processer) SaveDB(chainId int, fromAddress string, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (models.EthereumLogs, error) {
+func (processer *LogsProcesser) SaveDB(chainId int, fromAddress string, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (models.EthereumLogs, error) {
 	ethereumLogs := models.EthereumLogs{}
 
 	jsonStr, err := json.Marshal(data)
 	if err != nil {
-		log.Println("Processer.SaveDB()", err)
+		log.Println("LogsProcesser.SaveDB()", err)
 		return ethereumLogs, err
 	}
 	fromAddress = strings.ToLower(fromAddress)
@@ -253,14 +254,14 @@ func (processer *Processer) SaveDB(chainId int, fromAddress string, contractAddr
 
 	ethereumLogs, err = ethereumLogsDao.Create(ethereumLogs, nil)
 	if err != nil {
-		log.Println("Processer.SaveDB()", err)
+		log.Println("LogsProcesser.SaveDB()", err)
 		return ethereumLogs, err
 	}
 
 	return ethereumLogs, nil
 }
 
-func (processer *Processer) PubSub(chainId int, fromAddress string, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (*pubsub.PublishResult, error) {
+func (processer *LogsProcesser) PubSub(chainId int, fromAddress string, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (*pubsub.PublishResult, error) {
 	fromAddress = strings.ToLower(fromAddress)
 	contractAddress = strings.ToLower(contractAddress)
 	hash = strings.ToLower(hash)
@@ -276,7 +277,7 @@ func (processer *Processer) PubSub(chainId int, fromAddress string, contractAddr
 	pubsubData["data"] = data
 	jsonStr, err := json.Marshal(pubsubData)
 	if err != nil {
-		log.Println("Processer.PubSub()", err)
+		log.Println("LogsProcesser.PubSub()", err)
 		return nil, err
 	}
 	log.Println(string(jsonStr))
