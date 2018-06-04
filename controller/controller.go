@@ -138,36 +138,36 @@ func (processer *Processer) Process() (error) {
 					break
 				}
 			} else {
-				data, err := processer.MakeData(event, outptr.Interface())
+				data, err := processer.MigrateData(event, outptr.Interface())
 				if err != nil {
 					log.Println("Processer.Process()", err)
 					break
 				}
-				go processer.ProcessData(processer.Agr.ChainId, processer.Agr.ContractAddress, event, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
+				go processer.ProcessMessage(processer.Agr.ChainId, processer.Agr.ContractAddress, event, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
 			}
 		}
 	}
 	return nil
 }
 
-func (processer *Processer) MakeData(event string, source interface{}) (map[string]interface{}, error) {
+func (processer *Processer) MigrateData(event string, source interface{}) (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 
 	jsonStr, err := json.Marshal(source)
 	if err != nil {
-		log.Println("Processer.MakeData()", err)
+		log.Println("Processer.MigrateData()", err)
 		return result, err
 	}
 	err = json.Unmarshal(jsonStr, &result)
 	if err != nil {
-		log.Println("Processer.MakeData()", err)
+		log.Println("Processer.MigrateData()", err)
 		return result, err
 	}
 
 	for k, v := range result {
 		switch v.(type) {
 		default:
-			log.Println("Processer.MakeData() unexpected type pos 1 %T", v)
+			log.Println("Processer.MigrateData() unexpected type pos 1 %T", v)
 			break
 		case float64:
 			result[k] = int64(v.(float64))
@@ -177,7 +177,7 @@ func (processer *Processer) MakeData(event string, source interface{}) (map[stri
 			for _, i := range v.([]interface{}) {
 				switch i.(type) {
 				default:
-					log.Println("Processer.MakeData() unexpected type pos 2 %T", v)
+					log.Println("Processer.MigrateData() unexpected type pos 2 %T", v)
 					break
 				case float64:
 					str += string([]byte{byte(i.(float64))})
@@ -193,32 +193,32 @@ func (processer *Processer) MakeData(event string, source interface{}) (map[stri
 	return result, nil
 }
 
-func (processer *Processer) ProcessData(chainId int, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (error) {
+func (processer *Processer) ProcessMessage(chainId int, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (error) {
 	fromAddress := ""
 	transaction, _, err := processer.Client.TransactionByHash(context.Background(), common.HexToHash(hash))
 	if err != nil {
-		log.Println("Processer.ProcessData()", err)
+		log.Println("Processer.ProcessMessage()", err)
 	} else {
 		fromAddress = transaction.From().String()
 	}
 	ethereumLogs, err := processer.SaveDB(processer.Agr.ChainId, fromAddress, processer.Agr.ContractAddress, event, blockNumber, logIndex, hash, data)
 	if err != nil {
-		log.Println("Processer.ProcessData()", err)
+		log.Println("Processer.ProcessMessage()", err)
 	}
 	res, err := processer.PubSub(processer.Agr.ChainId, fromAddress, processer.Agr.ContractAddress, event, blockNumber, logIndex, hash, data)
 	if err != nil {
-		log.Println("Processer.ProcessData()", err)
+		log.Println("Processer.ProcessMessage()", err)
 		return err
 	}
 	if res != nil && ethereumLogs.ID > 0 {
 		serverID, err := res.Get(context.Background())
 		if err != nil {
-			log.Println("Processer.ProcessData()", err)
+			log.Println("Processer.ProcessMessage()", err)
 		}
 		ethereumLogs.PubsubMsgId = serverID
 		ethereumLogs, err = ethereumLogsDao.Update(ethereumLogs, nil)
 		if err != nil {
-			log.Println("Processer.ProcessData()", err)
+			log.Println("Processer.ProcessMessage()", err)
 			return nil
 		}
 	}
