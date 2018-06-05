@@ -93,9 +93,9 @@ func NewLogsProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*LogsProcesse
 	}
 	processer.Abi = abiIns
 
-	pubsubTopic := pubsubClient.Topic(agr.PubsubName)
-	if pubsubTopic == nil || pubsubTopic.ID() != agr.PubsubName {
-		pubsubTopic, err := pubsubClient.CreateTopic(context.Background(), agr.PubsubName)
+	pubsubTopic := pubsubClient.Topic(agr.TopicName)
+	if pubsubTopic == nil || pubsubTopic.ID() != agr.TopicName {
+		pubsubTopic, err := pubsubClient.CreateTopic(context.Background(), agr.TopicName)
 		if err != nil {
 			log.Println("NewLogsProcesser", err)
 		} else {
@@ -110,10 +110,10 @@ func NewLogsProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*LogsProcesse
 
 func (processer *LogsProcesser) Process() (error) {
 	log.Println("contract address", processer.Agr.ContractAddress)
-	for _, event := range processer.Agr.Events {
+	for _, event := range processer.Abi.Events {
 		log.Println("LogsProcesser.Process() for event ", event)
 
-		contractLogs := ethereumLogsDao.GetByFilter(processer.Agr.ContractAddress, event)
+		contractLogs := ethereumLogsDao.GetByFilter(processer.Agr.ContractAddress, event.Name)
 		q := ethereum.FilterQuery{}
 		q.Addresses = processer.Addresses
 		q.FromBlock = nil
@@ -121,7 +121,7 @@ func (processer *LogsProcesser) Process() (error) {
 			q.FromBlock = big.NewInt(contractLogs.BlockNumber + 1)
 		}
 		q.ToBlock = nil
-		q.Topics = [][]common.Hash{[]common.Hash{processer.Abi.Events[event].Id()}}
+		q.Topics = [][]common.Hash{[]common.Hash{processer.Abi.Events[event.Name].Id()}}
 		etherLogs, err := processer.Client.FilterLogs(context.Background(), q)
 		if err != nil {
 			log.Println("LogsProcesser.Process()", err)
@@ -131,25 +131,25 @@ func (processer *LogsProcesser) Process() (error) {
 		for _, etherLog := range etherLogs {
 			hash := etherLog.TxHash.String()
 
-			val, ok := abiStructs[event]
+			val, ok := abiStructs[event.Name]
 			if !ok {
-				log.Println(errors.New("event " + event + " struct is missed"))
+				log.Println(errors.New("event " + event.Name + " struct is missed"))
 				break
 			}
 			outptr := reflect.New(reflect.TypeOf(val))
-			err = processer.Abi.Unpack(outptr.Interface(), event, etherLog.Data)
+			err = processer.Abi.Unpack(outptr.Interface(), event.Name, etherLog.Data)
 			if err != nil {
 				if err != nil {
 					log.Println("LogsProcesser.Process()", err)
 					break
 				}
 			} else {
-				data, err := processer.MigrateData(event, outptr.Interface())
+				data, err := processer.MigrateData(event.Name, outptr.Interface())
 				if err != nil {
 					log.Println("LogsProcesser.Process()", err)
 					break
 				}
-				go processer.ProcessMessage(processer.Agr.ChainId, processer.Agr.ContractAddress, event, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
+				go processer.ProcessMessage(processer.Agr.ChainId, processer.Agr.ContractAddress, event.Name, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
 			}
 		}
 	}

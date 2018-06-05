@@ -154,6 +154,5 @@ type Agr struct {
 	ChainNetwork    string   `json:"chain_network"`
 	Contract        string   `json:"contract"`
 	ContractAddress string   `json:"contract_address"`
-	Events          []string `json:"events"`
-	PubsubName      string   `json:"pubsub_name"`
+	TopicName       string   `json:"topic_name"`
 }
