@@ -1,10 +1,10 @@
 package param
 
 import (
+	"encoding/json"
+	"log"
 	"math/big"
 	"os"
-	"log"
-	"encoding/json"
 )
 
 var Conf Config
@@ -15,16 +15,18 @@ var CONTRACT_CRYPTOSIGN = "cryptosign"
 var ABI_STRUCTS = map[string]map[string]interface{}{}
 var ABI_FILES = map[string]string{}
 
-func Initialize(confFile string) {
+func Initialize(confFile string) error {
 	file, err := os.Open(confFile)
 	if err != nil {
 		log.Println(err)
+		return err
 	}
 	decoder := json.NewDecoder(file)
 	conf := Config{}
 	err = decoder.Decode(&conf)
 	if err != nil {
 		log.Println(err)
+		return err
 	}
 	Conf = conf
 
@@ -140,19 +142,23 @@ func Initialize(confFile string) {
 	}{big.NewInt(1),
 		[32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	}
+
+	return nil
 }
 
 type Config struct {
-	DbUrl     string `json:"db_url"`
-	CredsFile string `json:"creds_file"`
-	ProjectId string `json:"project_id"`
-	Agrs      []Agr  `json:"agrs"`
+	DbUrl             string `json:"db_url"`
+	CredsFile         string `json:"creds_file"`
+	ProjectId         string `json:"project_id"`
+	Agrs              []Agr  `json:"agrs"`
+	RinkebyNetwork    string `json:"rinkeby_network"`
+	RinkebyPrivateKey string `json:"rinkeby_private_key"`
 }
 
 type Agr struct {
-	ChainId         int      `json:"chain_id"`
-	ChainNetwork    string   `json:"chain_network"`
-	Contract        string   `json:"contract"`
-	ContractAddress string   `json:"contract_address"`
-	TopicName       string   `json:"topic_name"`
+	ChainId         int    `json:"chain_id"`
+	ChainNetwork    string `json:"chain_network"`
+	Contract        string `json:"contract"`
+	ContractAddress string `json:"contract_address"`
+	TopicName       string `json:"topic_name"`
 }
