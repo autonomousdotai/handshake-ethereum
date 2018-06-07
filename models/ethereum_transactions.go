@@ -1,10 +1,11 @@
 package models
 
 import (
-	_ "github.com/jinzhu/gorm/dialects/mysql"
-	_ "github.com/jinzhu/gorm"
 	_ "encoding/gob"
 	"time"
+
+	_ "github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 type EthereumTransactions struct {

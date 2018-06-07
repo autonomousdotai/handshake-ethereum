@@ -121,7 +121,7 @@ func serviceApp() error {
 		})
 		index.POST("/tx", func(c *gin.Context) {
 
-			userId, ok := c.Get("UserId")
+			userID, ok := c.Get("UserID")
 			if !ok {
 				result := map[string]interface{}{
 					"status":  -1,
@@ -130,7 +130,7 @@ func serviceApp() error {
 				c.JSON(http.StatusOK, result)
 				return
 			}
-			if userId.(int64) <= 0 {
+			if userID.(int64) <= 0 {
 				result := map[string]interface{}{
 					"status":  -1,
 					"message": "user is not logged in",
@@ -149,7 +149,7 @@ func serviceApp() error {
 				c.JSON(http.StatusOK, result)
 				return
 			}
-			ethTrans.UserId = userId.(int64)
+			ethTrans.UserId = userID.(int64)
 			_, err = controller.CreateEthereumTransaction(*ethTrans)
 			if err != nil {
 				result := map[string]interface{}{
@@ -167,6 +167,23 @@ func serviceApp() error {
 			c.JSON(http.StatusOK, result)
 		})
 		index.POST("/rinkeby/transfer", func(c *gin.Context) {
+			userID, ok := c.Get("UserID")
+			if !ok {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "user is not logged in",
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+			if userID.(int64) <= 0 {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "user is not logged in",
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
 
 			privateKeyStr := c.Query("private_key")
 			toAddressStr := c.Query("to_address")
@@ -233,7 +250,30 @@ func serviceApp() error {
 			}
 			err = rinkebyClient.SendTransaction(context.Background(), signedTx)
 			if err != nil {
-				log.Fatal(err)
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
+			ethTrans := models.EthereumTransactions{}
+			ethTrans.Hash = signedTx.Hash().Hex()
+			ethTrans.FromAddress = fromAddress.Hex()
+			ethTrans.ToAddress = toAddressStr
+			ethTrans.RefType = "user_rinkeby_transfer"
+			ethTrans.RefId = userID.(int64)
+			ethTrans.UserId = userID.(int64)
+
+			_, err = controller.CreateEthereumTransaction(ethTrans)
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
 			}
 
 			result := map[string]interface{}{
@@ -250,6 +290,23 @@ func serviceApp() error {
 		})
 
 		index.POST("/rinkeby/free-ether", func(c *gin.Context) {
+			userID, ok := c.Get("UserID")
+			if !ok {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "user is not logged in",
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+			if userID.(int64) <= 0 {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "user is not logged in",
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
 
 			privateKeyStr := param.Conf.RinkebyPrivateKey
 			toAddressStr := c.Query("to_address")
@@ -316,7 +373,30 @@ func serviceApp() error {
 			}
 			err = rinkebyClient.SendTransaction(context.Background(), signedTx)
 			if err != nil {
-				log.Fatal(err)
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
+			ethTrans := models.EthereumTransactions{}
+			ethTrans.Hash = signedTx.Hash().Hex()
+			ethTrans.FromAddress = fromAddress.Hex()
+			ethTrans.ToAddress = toAddressStr
+			ethTrans.RefType = "user_rinkeby_free_ether"
+			ethTrans.RefId = userID.(int64)
+			ethTrans.UserId = userID.(int64)
+
+			_, err = controller.CreateEthereumTransaction(ethTrans)
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
 			}
 
 			result := map[string]interface{}{
@@ -350,8 +430,8 @@ func Logger() gin.HandlerFunc {
 
 func AuthorizeMiddleware() gin.HandlerFunc {
 	return func(context *gin.Context) {
-		userId, _ := strconv.ParseInt(context.GetHeader("User-Id"), 10, 64)
-		context.Set("UserId", userId)
+		userID, _ := strconv.ParseInt(context.GetHeader("Uid"), 10, 64)
+		context.Set("UserId", userID)
 		context.Next()
 	}
 }
