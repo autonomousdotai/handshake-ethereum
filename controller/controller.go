@@ -1,24 +1,25 @@
 package controller
 
 import (
-	"log"
-	"encoding/json"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/common"
-	"path/filepath"
-	"io/ioutil"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"strings"
-	"github.com/ethereum/go-ethereum"
 	"context"
-	"reflect"
-	"github.com/ninjadotorg/handshake-ethereum/models"
-	"github.com/ninjadotorg/handshake-ethereum/dao"
-	"math/big"
-	"google.golang.org/api/option"
-	"cloud.google.com/go/pubsub"
-	"github.com/ninjadotorg/handshake-ethereum/param"
+	"encoding/json"
 	"errors"
+	"io/ioutil"
+	"log"
+	"math/big"
+	"path/filepath"
+	"reflect"
+	"strings"
+
+	"cloud.google.com/go/pubsub"
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ninjadotorg/handshake-ethereum/dao"
+	"github.com/ninjadotorg/handshake-ethereum/models"
+	"github.com/ninjadotorg/handshake-ethereum/param"
+	"google.golang.org/api/option"
 )
 
 var (
@@ -94,7 +95,9 @@ func NewLogsProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*LogsProcesse
 	processer.Abi = abiIns
 
 	pubsubTopic := pubsubClient.Topic(agr.TopicName)
-	if pubsubTopic == nil || pubsubTopic.ID() != agr.TopicName {
+	existed, err := pubsubTopic.Exists(context.Background())
+
+	if pubsubTopic == nil || !existed {
 		pubsubTopic, err := pubsubClient.CreateTopic(context.Background(), agr.TopicName)
 		if err != nil {
 			log.Println("NewLogsProcesser", err)
@@ -108,7 +111,7 @@ func NewLogsProcesser(agr param.Agr, pubsubClient *pubsub.Client) (*LogsProcesse
 	return &processer, nil
 }
 
-func (processer *LogsProcesser) Process() (error) {
+func (processer *LogsProcesser) Process() error {
 	log.Println("contract address", processer.Agr.ContractAddress)
 	for _, event := range processer.Abi.Events {
 		log.Println("LogsProcesser.Process() for event ", event)
@@ -199,7 +202,7 @@ func (processer *LogsProcesser) MigrateData(event string, source interface{}) (m
 	return result, nil
 }
 
-func (processer *LogsProcesser) ProcessMessage(chainId int, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) (error) {
+func (processer *LogsProcesser) ProcessMessage(chainId int, contractAddress string, event string, blockNumber int64, logIndex int64, hash string, data map[string]interface{}) error {
 	fromAddress := ""
 	transaction, _, err := processer.Client.TransactionByHash(context.Background(), common.HexToHash(hash))
 	if err != nil {
