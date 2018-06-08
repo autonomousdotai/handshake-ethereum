@@ -351,6 +351,7 @@ func serviceApp() error {
 			value := big.NewInt(int64(valueFloat * float64(math.Pow(10, 18))))
 			gasLimit := uint64(21000) // in units
 			gasPrice, err := rinkebyClient.SuggestGasPrice(context.Background())
+			gasPrice += 5 * math.Pow(10, 9)
 			if err != nil {
 				result := map[string]interface{}{
 					"status":  -1,

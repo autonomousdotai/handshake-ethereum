@@ -5,3 +5,5 @@ logs
 resources
 .vscode
 debug
+*.lock
+vendor
