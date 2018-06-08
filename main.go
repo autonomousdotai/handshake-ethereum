@@ -431,7 +431,7 @@ func Logger() gin.HandlerFunc {
 func AuthorizeMiddleware() gin.HandlerFunc {
 	return func(context *gin.Context) {
 		userID, _ := strconv.ParseInt(context.GetHeader("Uid"), 10, 64)
-		context.Set("UserId", userID)
+		context.Set("UserID", userID)
 		context.Next()
 	}
 }
