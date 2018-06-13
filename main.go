@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"io"
 	"log"
 	"math"
@@ -12,9 +13,12 @@ import (
 	"strconv"
 	"time"
 
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/ninjadotorg/handshake-ethereum/controller"
@@ -407,6 +411,166 @@ func serviceApp() error {
 					"to_address":   toAddressStr,
 					"hash":         signedTx.Hash().Hex(),
 					"value":        valueFloat,
+				},
+			}
+			c.JSON(http.StatusOK, result)
+			return
+		})
+
+		index.POST("/rinkeby/free-token", func(c *gin.Context) {
+			userID, ok := c.Get("UserID")
+			if !ok {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "user is not logged in",
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+			if userID.(int64) <= 0 {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "user is not logged in",
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
+			privateKeyStr := param.Conf.RinkebyPrivateKey
+			tokenAddressStr := param.Conf.RinkebyTokenAddress
+
+			toAddressStr := c.Query("to_address")
+			amountFloat, err := strconv.ParseFloat(c.Query("amount"), 64)
+
+			privateKey, err := crypto.HexToECDSA(privateKeyStr)
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+			publicKey := privateKey.Public()
+			publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+			if !ok {
+				log.Fatal("error casting public key to ECDSA")
+			}
+
+			fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+
+			nonce, err := rinkebyClient.PendingNonceAt(context.Background(), fromAddress)
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
+			value := big.NewInt(int64(0))
+			gasLimit := uint64(21000) // in units
+			gasPrice, err := rinkebyClient.SuggestGasPrice(context.Background())
+			gasPrice = big.NewInt(gasPrice.Int64() + int64(5*math.Pow(10, 9)))
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
+			toAddress := common.HexToAddress(toAddressStr)
+			tokenAddress := common.HexToAddress(tokenAddressStr)
+
+			transferFnSignature := []byte("transfer(address,uint256)")
+			hash := sha3.NewKeccak256()
+			hash.Write(transferFnSignature)
+			methodID := hash.Sum(nil)[:4]
+			fmt.Println(hexutil.Encode(methodID)) // 0xa9059cbb
+
+			paddedAddress := common.LeftPadBytes(toAddress.Bytes(), 32)
+
+			amount := new(big.Int)
+			amount.SetString(fmt.Sprintf("%d", int64(math.Pow10(18)*amountFloat)), 10)
+			paddedAmount := common.LeftPadBytes(amount.Bytes(), 32)
+
+			var data []byte
+			data = append(data, methodID...)
+			data = append(data, paddedAddress...)
+			data = append(data, paddedAmount...)
+
+			gasLimit, err = rinkebyClient.EstimateGas(context.Background(), ethereum.CallMsg{
+				To:   &toAddress,
+				Data: data,
+			})
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
+			tx := types.NewTransaction(nonce, tokenAddress, value, gasLimit, gasPrice, data)
+			signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, privateKey)
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
+			err = rinkebyClient.SendTransaction(context.Background(), signedTx)
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
+			ethTrans := models.EthereumTransactions{}
+			ethTrans.Hash = signedTx.Hash().Hex()
+			ethTrans.FromAddress = fromAddress.Hex()
+			ethTrans.ToAddress = toAddressStr
+			ethTrans.RefType = "user_rinkeby_free_token"
+			ethTrans.RefId = userID.(int64)
+			ethTrans.UserId = userID.(int64)
+
+			_, err = controller.CreateEthereumTransaction(ethTrans)
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
+			result := map[string]interface{}{
+				"status": 1,
+				"data": map[string]interface{}{
+					"token_address": tokenAddressStr,
+					"from_address":  fromAddress.Hex(),
+					"to_address":    toAddressStr,
+					"hash":          signedTx.Hash().Hex(),
+					"amount":        amountFloat,
 				},
 			}
 			c.JSON(http.StatusOK, result)

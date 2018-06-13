@@ -147,12 +147,13 @@ func Initialize(confFile string) error {
 }
 
 type Config struct {
-	DbUrl             string `json:"db_url"`
-	CredsFile         string `json:"creds_file"`
-	ProjectId         string `json:"project_id"`
-	Agrs              []Agr  `json:"agrs"`
-	RinkebyNetwork    string `json:"rinkeby_network"`
-	RinkebyPrivateKey string `json:"rinkeby_private_key"`
+	DbUrl               string `json:"db_url"`
+	CredsFile           string `json:"creds_file"`
+	ProjectId           string `json:"project_id"`
+	Agrs                []Agr  `json:"agrs"`
+	RinkebyNetwork      string `json:"rinkeby_network"`
+	RinkebyPrivateKey   string `json:"rinkeby_private_key"`
+	RinkebyTokenAddress string `json:"rinkeby_token_address"`
 }
 
 type Agr struct {
