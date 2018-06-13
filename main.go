@@ -97,11 +97,6 @@ func serviceApp() error {
 		panic(err)
 	}
 
-	rinkebyClient, err := ethclient.Dial(param.Conf.RinkebyNetwork)
-	if err != nil {
-		panic(err)
-	}
-
 	// Logger
 	logFile, err := os.OpenFile("logs/autonomous_service.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
@@ -153,7 +148,7 @@ func serviceApp() error {
 				c.JSON(http.StatusOK, result)
 				return
 			}
-			ethTrans.UserId = userID.(int64)
+			ethTrans.UserID = userID.(int64)
 			_, err = controller.CreateEthereumTransaction(*ethTrans)
 			if err != nil {
 				result := map[string]interface{}{
@@ -170,7 +165,7 @@ func serviceApp() error {
 			}
 			c.JSON(http.StatusOK, result)
 		})
-		index.POST("/rinkeby/transfer", func(c *gin.Context) {
+		index.POST("/transfer", func(c *gin.Context) {
 			userID, ok := c.Get("UserID")
 			if !ok {
 				result := map[string]interface{}{
@@ -184,6 +179,30 @@ func serviceApp() error {
 				result := map[string]interface{}{
 					"status":  -1,
 					"message": "user is not logged in",
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
+			networkIDStr := c.Query("network_id")
+			if networkIDStr == "" {
+				networkIDStr = "rinkeby"
+			}
+			network, ok := param.Conf.Networks[networkIDStr]
+			if !ok {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "network_id is invalid",
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
+			etherClient, err := ethclient.Dial(network.NetworkURL)
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
 				}
 				c.JSON(http.StatusOK, result)
 				return
@@ -210,7 +229,7 @@ func serviceApp() error {
 
 			fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
 
-			nonce, err := rinkebyClient.PendingNonceAt(context.Background(), fromAddress)
+			nonce, err := etherClient.PendingNonceAt(context.Background(), fromAddress)
 			if err != nil {
 				result := map[string]interface{}{
 					"status":  -1,
@@ -231,7 +250,7 @@ func serviceApp() error {
 
 			value := big.NewInt(int64(valueFloat * float64(math.Pow(10, 18))))
 			gasLimit := uint64(21000) // in units
-			gasPrice, err := rinkebyClient.SuggestGasPrice(context.Background())
+			gasPrice, err := etherClient.SuggestGasPrice(context.Background())
 			if err != nil {
 				result := map[string]interface{}{
 					"status":  -1,
@@ -252,7 +271,7 @@ func serviceApp() error {
 				c.JSON(http.StatusOK, result)
 				return
 			}
-			err = rinkebyClient.SendTransaction(context.Background(), signedTx)
+			err = etherClient.SendTransaction(context.Background(), signedTx)
 			if err != nil {
 				result := map[string]interface{}{
 					"status":  -1,
@@ -266,9 +285,10 @@ func serviceApp() error {
 			ethTrans.Hash = signedTx.Hash().Hex()
 			ethTrans.FromAddress = fromAddress.Hex()
 			ethTrans.ToAddress = toAddressStr
-			ethTrans.RefType = "user_rinkeby_transfer"
-			ethTrans.RefId = userID.(int64)
-			ethTrans.UserId = userID.(int64)
+			ethTrans.RefType = "user_transfer"
+			ethTrans.RefID = userID.(int64)
+			ethTrans.UserID = userID.(int64)
+			ethTrans.Network = networkIDStr
 
 			_, err = controller.CreateEthereumTransaction(ethTrans)
 			if err != nil {
@@ -293,7 +313,7 @@ func serviceApp() error {
 			return
 		})
 
-		index.POST("/rinkeby/free-ether", func(c *gin.Context) {
+		index.POST("/free-ether", func(c *gin.Context) {
 			userID, ok := c.Get("UserID")
 			if !ok {
 				result := map[string]interface{}{
@@ -312,7 +332,30 @@ func serviceApp() error {
 				return
 			}
 
-			privateKeyStr := param.Conf.RinkebyPrivateKey
+			networkIDStr := c.Query("network_id")
+			if networkIDStr == "" {
+				networkIDStr = "rinkeby"
+			}
+			network, ok := param.Conf.Networks[networkIDStr]
+			if !ok {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "network_id is invalid",
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
+			etherClient, err := ethclient.Dial(network.NetworkURL)
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
 			toAddressStr := c.Query("to_address")
 			valueFloat, err := strconv.ParseFloat(c.Query("value"), 64)
 			if err != nil {
@@ -323,6 +366,8 @@ func serviceApp() error {
 				c.JSON(http.StatusOK, result)
 				return
 			}
+
+			privateKeyStr := network.PrivateKey
 
 			privateKey, err := crypto.HexToECDSA(privateKeyStr)
 			if err != nil {
@@ -341,7 +386,7 @@ func serviceApp() error {
 
 			fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
 
-			nonce, err := rinkebyClient.PendingNonceAt(context.Background(), fromAddress)
+			nonce, err := etherClient.PendingNonceAt(context.Background(), fromAddress)
 			if err != nil {
 				result := map[string]interface{}{
 					"status":  -1,
@@ -362,7 +407,7 @@ func serviceApp() error {
 
 			value := big.NewInt(int64(valueFloat * float64(math.Pow(10, 18))))
 			gasLimit := uint64(21000) // in units
-			gasPrice, err := rinkebyClient.SuggestGasPrice(context.Background())
+			gasPrice, err := etherClient.SuggestGasPrice(context.Background())
 			gasPrice = big.NewInt(gasPrice.Int64() + int64(5*math.Pow(10, 9)))
 			if err != nil {
 				result := map[string]interface{}{
@@ -384,7 +429,7 @@ func serviceApp() error {
 				c.JSON(http.StatusOK, result)
 				return
 			}
-			err = rinkebyClient.SendTransaction(context.Background(), signedTx)
+			err = etherClient.SendTransaction(context.Background(), signedTx)
 			if err != nil {
 				result := map[string]interface{}{
 					"status":  -1,
@@ -398,9 +443,10 @@ func serviceApp() error {
 			ethTrans.Hash = signedTx.Hash().Hex()
 			ethTrans.FromAddress = fromAddress.Hex()
 			ethTrans.ToAddress = toAddressStr
-			ethTrans.RefType = "user_rinkeby_free_ether"
-			ethTrans.RefId = userID.(int64)
-			ethTrans.UserId = userID.(int64)
+			ethTrans.RefType = "user_free_ether"
+			ethTrans.RefID = userID.(int64)
+			ethTrans.UserID = userID.(int64)
+			ethTrans.Network = networkIDStr
 
 			_, err = controller.CreateEthereumTransaction(ethTrans)
 			if err != nil {
@@ -425,7 +471,7 @@ func serviceApp() error {
 			return
 		})
 
-		index.POST("/rinkeby/free-token", func(c *gin.Context) {
+		index.POST("/free-token", func(c *gin.Context) {
 			userID, ok := c.Get("UserID")
 			if !ok {
 				result := map[string]interface{}{
@@ -444,8 +490,29 @@ func serviceApp() error {
 				return
 			}
 
-			privateKeyStr := param.Conf.RinkebyPrivateKey
-			tokenAddressStr := param.Conf.RinkebyTokenAddress
+			networkIDStr := c.Query("network_id")
+			if networkIDStr == "" {
+				networkIDStr = "rinkeby"
+			}
+			network, ok := param.Conf.Networks[networkIDStr]
+			if !ok {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "network_id is invalid",
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
+
+			etherClient, err := ethclient.Dial(network.NetworkURL)
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
 
 			toAddressStr := c.Query("to_address")
 			amountFloat, err := strconv.ParseFloat(c.Query("amount"), 64)
@@ -457,6 +524,9 @@ func serviceApp() error {
 				c.JSON(http.StatusOK, result)
 				return
 			}
+
+			privateKeyStr := network.PrivateKey
+			tokenAddressStr := network.TokenAddress
 
 			privateKey, err := crypto.HexToECDSA(privateKeyStr)
 			if err != nil {
@@ -475,7 +545,7 @@ func serviceApp() error {
 
 			fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
 
-			nonce, err := rinkebyClient.PendingNonceAt(context.Background(), fromAddress)
+			nonce, err := etherClient.PendingNonceAt(context.Background(), fromAddress)
 			if err != nil {
 				result := map[string]interface{}{
 					"status":  -1,
@@ -496,7 +566,7 @@ func serviceApp() error {
 
 			value := big.NewInt(int64(0))
 			gasLimit := uint64(21000) // in units
-			gasPrice, err := rinkebyClient.SuggestGasPrice(context.Background())
+			gasPrice, err := etherClient.SuggestGasPrice(context.Background())
 			gasPrice = big.NewInt(gasPrice.Int64() + int64(5*math.Pow(10, 9)))
 			if err != nil {
 				result := map[string]interface{}{
@@ -527,7 +597,7 @@ func serviceApp() error {
 			data = append(data, paddedAddress...)
 			data = append(data, paddedAmount...)
 
-			gasLimit, err = rinkebyClient.EstimateGas(context.Background(), ethereum.CallMsg{
+			gasLimit, err = etherClient.EstimateGas(context.Background(), ethereum.CallMsg{
 				To:   &toAddress,
 				Data: data,
 			})
@@ -551,7 +621,7 @@ func serviceApp() error {
 				return
 			}
 
-			err = rinkebyClient.SendTransaction(context.Background(), signedTx)
+			err = etherClient.SendTransaction(context.Background(), signedTx)
 			if err != nil {
 				result := map[string]interface{}{
 					"status":  -1,
@@ -565,9 +635,10 @@ func serviceApp() error {
 			ethTrans.Hash = signedTx.Hash().Hex()
 			ethTrans.FromAddress = fromAddress.Hex()
 			ethTrans.ToAddress = toAddressStr
-			ethTrans.RefType = "user_rinkeby_free_token"
-			ethTrans.RefId = userID.(int64)
-			ethTrans.UserId = userID.(int64)
+			ethTrans.RefType = "user_free_token"
+			ethTrans.RefID = userID.(int64)
+			ethTrans.UserID = userID.(int64)
+			ethTrans.Network = networkIDStr
 
 			_, err = controller.CreateEthereumTransaction(ethTrans)
 			if err != nil {

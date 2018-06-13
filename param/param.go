@@ -146,18 +146,25 @@ func Initialize(confFile string) error {
 	return nil
 }
 
+type Network struct {
+	NetworkURL   string `json:"network_url"`
+	PrivateKey   string `json:"private_key"`
+	TokenAddress string `json:"token_address"`
+}
+
 type Config struct {
-	DbUrl               string `json:"db_url"`
-	CredsFile           string `json:"creds_file"`
-	ProjectId           string `json:"project_id"`
-	Agrs                []Agr  `json:"agrs"`
-	RinkebyNetwork      string `json:"rinkeby_network"`
-	RinkebyPrivateKey   string `json:"rinkeby_private_key"`
-	RinkebyTokenAddress string `json:"rinkeby_token_address"`
+	DbURL     string `json:"db_url"`
+	CredsFile string `json:"creds_file"`
+	ProjectID string `json:"project_id"`
+	Agrs      []Agr  `json:"agrs"`
+	// RinkebyNetwork      string             `json:"rinkeby_network"`
+	// RinkebyPrivateKey   string             `json:"rinkeby_private_key"`
+	// RinkebyTokenAddress string             `json:"rinkeby_token_address"`
+	Networks map[string]Network `json:"networks"`
 }
 
 type Agr struct {
-	ChainId         int    `json:"chain_id"`
+	ChainID         int    `json:"chain_id"`
 	ChainNetwork    string `json:"chain_network"`
 	Contract        string `json:"contract"`
 	ContractAddress string `json:"contract_address"`

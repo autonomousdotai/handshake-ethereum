@@ -43,7 +43,7 @@ type LogsProcesser struct {
 func NewConcotrller(agrs []param.Agr) (*Controller, error) {
 	controller := Controller{}
 	opt := option.WithCredentialsFile(param.Conf.CredsFile)
-	pubsubClient, err := pubsub.NewClient(context.Background(), param.Conf.ProjectId, opt)
+	pubsubClient, err := pubsub.NewClient(context.Background(), param.Conf.ProjectID, opt)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -152,7 +152,7 @@ func (processer *LogsProcesser) Process() error {
 					log.Println("LogsProcesser.Process()", err)
 					break
 				}
-				go processer.ProcessMessage(processer.Agr.ChainId, processer.Agr.ContractAddress, event.Name, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
+				go processer.ProcessMessage(processer.Agr.ChainID, processer.Agr.ContractAddress, event.Name, int64(etherLog.BlockNumber), int64(etherLog.Index), hash, data)
 			}
 		}
 	}
@@ -210,11 +210,11 @@ func (processer *LogsProcesser) ProcessMessage(chainId int, contractAddress stri
 	} else {
 		fromAddress = transaction.From().String()
 	}
-	ethereumLogs, err := processer.SaveDB(processer.Agr.ChainId, fromAddress, processer.Agr.ContractAddress, event, blockNumber, logIndex, hash, data)
+	ethereumLogs, err := processer.SaveDB(processer.Agr.ChainID, fromAddress, processer.Agr.ContractAddress, event, blockNumber, logIndex, hash, data)
 	if err != nil {
 		log.Println("LogsProcesser.ProcessMessage()", err)
 	}
-	res, err := processer.PubSub(processer.Agr.ChainId, fromAddress, processer.Agr.ContractAddress, event, blockNumber, logIndex, hash, data)
+	res, err := processer.PubSub(processer.Agr.ChainID, fromAddress, processer.Agr.ContractAddress, event, blockNumber, logIndex, hash, data)
 	if err != nil {
 		log.Println("LogsProcesser.ProcessMessage()", err)
 		return err

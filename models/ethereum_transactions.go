@@ -12,11 +12,12 @@ type EthereumTransactions struct {
 	DateCreated  time.Time
 	DateModified time.Time
 	ID           int64
-	UserId       int64
-	ChainId      int64  `json:"chain_id"`
+	UserID       int64
+	Network      string `json:"network"`
+	ChainID      int64  `json:"chain_id"`
 	Contract     string `json:"contract"`
 	RefType      string `json:"ref_type"`
-	RefId        int64  `json:"ref_id"`
+	RefID        int64  `json:"ref_id"`
 	Hash         string `json:"hash"`
 	FromAddress  string
 	ToAddress    string
