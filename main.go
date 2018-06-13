@@ -315,6 +315,14 @@ func serviceApp() error {
 			privateKeyStr := param.Conf.RinkebyPrivateKey
 			toAddressStr := c.Query("to_address")
 			valueFloat, err := strconv.ParseFloat(c.Query("value"), 64)
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
 
 			privateKey, err := crypto.HexToECDSA(privateKeyStr)
 			if err != nil {
@@ -441,6 +449,14 @@ func serviceApp() error {
 
 			toAddressStr := c.Query("to_address")
 			amountFloat, err := strconv.ParseFloat(c.Query("amount"), 64)
+			if err != nil {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": err.Error(),
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
 
 			privateKey, err := crypto.HexToECDSA(privateKeyStr)
 			if err != nil {
@@ -596,6 +612,11 @@ func Logger() gin.HandlerFunc {
 func AuthorizeMiddleware() gin.HandlerFunc {
 	return func(context *gin.Context) {
 		userID, _ := strconv.ParseInt(context.GetHeader("Uid"), 10, 64)
+		if userID <= 0 {
+			context.JSON(http.StatusOK, gin.H{"status": 0, "message": "User is not authorized"})
+			context.Abort()
+			return
+		}
 		context.Set("UserID", userID)
 		context.Next()
 	}
