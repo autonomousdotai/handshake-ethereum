@@ -13,9 +13,7 @@ import (
 	"strconv"
 	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
@@ -249,7 +247,7 @@ func serviceApp() error {
 			}
 
 			value := big.NewInt(int64(valueFloat * float64(math.Pow(10, 18))))
-			gasLimit := uint64(21000) // in units
+			gasLimit := uint64(100000) // in units
 			gasPrice, err := etherClient.SuggestGasPrice(context.Background())
 			if err != nil {
 				result := map[string]interface{}{
@@ -406,8 +404,9 @@ func serviceApp() error {
 			}
 
 			value := big.NewInt(int64(valueFloat * float64(math.Pow(10, 18))))
-			gasLimit := uint64(21000) // in units
+			gasLimit := uint64(100000) // in units
 			gasPrice, err := etherClient.SuggestGasPrice(context.Background())
+			gasPrice = big.NewInt(gasPrice.Int64() + int64(5*math.Pow(10, 9)))
 			if err != nil {
 				result := map[string]interface{}{
 					"status":  -1,
@@ -564,7 +563,7 @@ func serviceApp() error {
 			}
 
 			value := big.NewInt(int64(0))
-			gasLimit := uint64(21000) // in units
+			gasLimit := uint64(100000) // in units
 			gasPrice, err := etherClient.SuggestGasPrice(context.Background())
 			gasPrice = big.NewInt(gasPrice.Int64() + int64(5*math.Pow(10, 9)))
 			if err != nil {
@@ -583,7 +582,6 @@ func serviceApp() error {
 			hash := sha3.NewKeccak256()
 			hash.Write(transferFnSignature)
 			methodID := hash.Sum(nil)[:4]
-			fmt.Println(hexutil.Encode(methodID)) // 0xa9059cbb
 
 			paddedAddress := common.LeftPadBytes(toAddress.Bytes(), 32)
 
@@ -596,10 +594,11 @@ func serviceApp() error {
 			data = append(data, paddedAddress...)
 			data = append(data, paddedAmount...)
 
-			gasLimit, err = etherClient.EstimateGas(context.Background(), ethereum.CallMsg{
-				To:   &toAddress,
-				Data: data,
-			})
+			// gasLimit, err = etherClient.EstimateGas(context.Background(), ethereum.CallMsg{
+			// 	To:   &toAddress,
+			// 	Data: data,
+			// })
+
 			if err != nil {
 				result := map[string]interface{}{
 					"status":  -1,
@@ -663,6 +662,7 @@ func serviceApp() error {
 			return
 		})
 	}
+
 	router.Run(":8080")
 
 	return nil
