@@ -3,10 +3,8 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
-	"fmt"
 	"io"
 	"log"
-	"math"
 	"math/big"
 	"net/http"
 	"os"
@@ -27,7 +25,8 @@ import (
 )
 
 var (
-	app *cli.App
+	app          *cli.App
+	etherClients = map[string]*ethclient.Client{}
 )
 
 func init() {
@@ -93,6 +92,14 @@ func serviceApp() error {
 	err := param.Initialize(os.Getenv("APP_CONF"))
 	if err != nil {
 		panic(err)
+	}
+
+	for k, network := range param.Conf.Networks {
+		etherClient, err := ethclient.Dial(network.NetworkURL)
+		if err != nil {
+			panic(err)
+		}
+		etherClients[k] = etherClient
 	}
 
 	// Logger
@@ -186,21 +193,12 @@ func serviceApp() error {
 			if networkIDStr == "" {
 				networkIDStr = "rinkeby"
 			}
-			network, ok := param.Conf.Networks[networkIDStr]
+
+			etherClient, ok := etherClients[networkIDStr]
 			if !ok {
 				result := map[string]interface{}{
 					"status":  -1,
 					"message": "network_id is invalid",
-				}
-				c.JSON(http.StatusOK, result)
-				return
-			}
-
-			etherClient, err := ethclient.Dial(network.NetworkURL)
-			if err != nil {
-				result := map[string]interface{}{
-					"status":  -1,
-					"message": err.Error(),
 				}
 				c.JSON(http.StatusOK, result)
 				return
@@ -222,7 +220,12 @@ func serviceApp() error {
 			publicKey := privateKey.Public()
 			publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 			if !ok {
-				log.Fatal("error casting public key to ECDSA")
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "error casting public key to ECDSA",
+				}
+				c.JSON(http.StatusOK, result)
+				return
 			}
 
 			fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
@@ -246,7 +249,7 @@ func serviceApp() error {
 				return
 			}
 
-			value := big.NewInt(int64(valueFloat * float64(math.Pow(10, 18))))
+			value := big.NewInt(int64(valueFloat * 1e18))
 			gasLimit := uint64(100000) // in units
 			gasPrice, err := etherClient.SuggestGasPrice(context.Background())
 			if err != nil {
@@ -344,11 +347,11 @@ func serviceApp() error {
 				return
 			}
 
-			etherClient, err := ethclient.Dial(network.NetworkURL)
-			if err != nil {
+			etherClient, ok := etherClients[networkIDStr]
+			if !ok {
 				result := map[string]interface{}{
 					"status":  -1,
-					"message": err.Error(),
+					"message": "network_id is invalid",
 				}
 				c.JSON(http.StatusOK, result)
 				return
@@ -379,7 +382,12 @@ func serviceApp() error {
 			publicKey := privateKey.Public()
 			publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 			if !ok {
-				log.Fatal("error casting public key to ECDSA")
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "error casting public key to ECDSA",
+				}
+				c.JSON(http.StatusOK, result)
+				return
 			}
 
 			fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
@@ -403,10 +411,10 @@ func serviceApp() error {
 				return
 			}
 
-			value := big.NewInt(int64(valueFloat * float64(math.Pow(10, 18))))
+			value := big.NewInt(int64(valueFloat * 1e18))
 			gasLimit := uint64(100000) // in units
 			gasPrice, err := etherClient.SuggestGasPrice(context.Background())
-			gasPrice = big.NewInt(gasPrice.Int64() + int64(5*math.Pow(10, 9)))
+			gasPrice = big.NewInt(gasPrice.Int64() + int64(5*1e09))
 			if err != nil {
 				result := map[string]interface{}{
 					"status":  -1,
@@ -502,11 +510,11 @@ func serviceApp() error {
 				return
 			}
 
-			etherClient, err := ethclient.Dial(network.NetworkURL)
-			if err != nil {
+			etherClient, ok := etherClients[networkIDStr]
+			if !ok {
 				result := map[string]interface{}{
 					"status":  -1,
-					"message": err.Error(),
+					"message": "network_id is invalid",
 				}
 				c.JSON(http.StatusOK, result)
 				return
@@ -538,7 +546,12 @@ func serviceApp() error {
 			publicKey := privateKey.Public()
 			publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 			if !ok {
-				log.Fatal("error casting public key to ECDSA")
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "error casting public key to ECDSA",
+				}
+				c.JSON(http.StatusOK, result)
+				return
 			}
 
 			fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
@@ -565,7 +578,7 @@ func serviceApp() error {
 			value := big.NewInt(int64(0))
 			gasLimit := uint64(100000) // in units
 			gasPrice, err := etherClient.SuggestGasPrice(context.Background())
-			gasPrice = big.NewInt(gasPrice.Int64() + int64(5*math.Pow(10, 9)))
+			gasPrice = big.NewInt(gasPrice.Int64() + int64(5*1e09))
 			if err != nil {
 				result := map[string]interface{}{
 					"status":  -1,
@@ -585,8 +598,7 @@ func serviceApp() error {
 
 			paddedAddress := common.LeftPadBytes(toAddress.Bytes(), 32)
 
-			amount := new(big.Int)
-			amount.SetString(fmt.Sprintf("%d", int64(math.Pow10(18)*amountFloat)), 10)
+			amount := big.NewInt(int64(1e18 * amountFloat))
 			paddedAmount := common.LeftPadBytes(amount.Bytes(), 32)
 
 			var data []byte
