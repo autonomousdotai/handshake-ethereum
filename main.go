@@ -205,7 +205,23 @@ func serviceApp() error {
 			}
 
 			privateKeyStr := c.Query("private_key")
+			if privateKeyStr == "" {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "private_key is invalid",
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
 			toAddressStr := c.Query("to_address")
+			if toAddressStr == "" {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "to_address is invalid",
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
 			valueFloat, err := strconv.ParseFloat(c.Query("value"), 64)
 
 			privateKey, err := crypto.HexToECDSA(privateKeyStr)
@@ -358,6 +374,14 @@ func serviceApp() error {
 			}
 
 			toAddressStr := c.Query("to_address")
+			if toAddressStr == "" {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "to_address is invalid",
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
 			valueFloat, err := strconv.ParseFloat(c.Query("value"), 64)
 			if err != nil {
 				result := map[string]interface{}{
@@ -521,6 +545,14 @@ func serviceApp() error {
 			}
 
 			toAddressStr := c.Query("to_address")
+			if toAddressStr == "" {
+				result := map[string]interface{}{
+					"status":  -1,
+					"message": "to_address is invalid",
+				}
+				c.JSON(http.StatusOK, result)
+				return
+			}
 			amountFloat, err := strconv.ParseFloat(c.Query("amount"), 64)
 			if err != nil {
 				result := map[string]interface{}{
