@@ -436,6 +436,7 @@ func serviceApp() error {
 			}
 
 			value := big.NewInt(int64(valueFloat * 1e18))
+
 			gasLimit := uint64(100000) // in units
 			gasPrice, err := etherClient.SuggestGasPrice(context.Background())
 			gasPrice = big.NewInt(gasPrice.Int64() + int64(5*1e09))
@@ -630,7 +631,9 @@ func serviceApp() error {
 
 			paddedAddress := common.LeftPadBytes(toAddress.Bytes(), 32)
 
-			amount := big.NewInt(int64(1e18 * amountFloat))
+			amount := big.NewInt(0)
+			amount = amount.Mul(big.NewInt(int64(amountFloat)), big.NewInt(int64(1e18)))
+
 			paddedAmount := common.LeftPadBytes(amount.Bytes(), 32)
 
 			var data []byte
