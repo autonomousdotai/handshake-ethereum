@@ -25,8 +25,10 @@ import (
 )
 
 var (
-	app          *cli.App
-	etherClients = map[string]*ethclient.Client{}
+	app           *cli.App
+	etherClients  = map[string]*ethclient.Client{}
+	freeTokenNone = uint64(0)
+	freeEtherNone = uint64(0)
 )
 
 func init() {
@@ -316,13 +318,14 @@ func serviceApp() error {
 				c.JSON(http.StatusOK, result)
 				return
 			}
-
+			txHash := signedTx.Hash().Hex()
+			log.Printf("hash : %s", txHash)
 			result := map[string]interface{}{
 				"status": 1,
 				"data": map[string]interface{}{
 					"from_address": fromAddress.Hex(),
 					"to_address":   toAddressStr,
-					"hash":         signedTx.Hash().Hex(),
+					"hash":         txHash,
 					"value":        valueFloat,
 				},
 			}
@@ -425,6 +428,11 @@ func serviceApp() error {
 				c.JSON(http.StatusOK, result)
 				return
 			}
+			if nonce > freeTokenNone {
+				freeEtherNone = nonce
+			} else {
+				freeEtherNone++
+			}
 
 			if err != nil {
 				result := map[string]interface{}{
@@ -450,7 +458,8 @@ func serviceApp() error {
 			}
 			toAddress := common.HexToAddress(toAddressStr)
 
-			tx := types.NewTransaction(nonce, toAddress, value, gasLimit, gasPrice, nil)
+			log.Printf("none : %d - %d", nonce, freeEtherNone)
+			tx := types.NewTransaction(freeEtherNone, toAddress, value, gasLimit, gasPrice, nil)
 			signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, privateKey)
 			if err != nil {
 				result := map[string]interface{}{
@@ -488,13 +497,14 @@ func serviceApp() error {
 				c.JSON(http.StatusOK, result)
 				return
 			}
-
+			txHash := signedTx.Hash().Hex()
+			log.Printf("hash : %s", txHash)
 			result := map[string]interface{}{
 				"status": 1,
 				"data": map[string]interface{}{
 					"from_address": fromAddress.Hex(),
 					"to_address":   toAddressStr,
-					"hash":         signedTx.Hash().Hex(),
+					"hash":         txHash,
 					"value":        valueFloat,
 				},
 			}
@@ -598,6 +608,11 @@ func serviceApp() error {
 				c.JSON(http.StatusOK, result)
 				return
 			}
+			if nonce > freeTokenNone {
+				freeTokenNone = nonce
+			} else {
+				freeTokenNone++
+			}
 
 			if err != nil {
 				result := map[string]interface{}{
@@ -654,8 +669,8 @@ func serviceApp() error {
 				c.JSON(http.StatusOK, result)
 				return
 			}
-
-			tx := types.NewTransaction(nonce, tokenAddress, value, gasLimit, gasPrice, data)
+			log.Printf("none : %d - %d", nonce, freeTokenNone)
+			tx := types.NewTransaction(freeTokenNone, tokenAddress, value, gasLimit, gasPrice, data)
 			signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, privateKey)
 			if err != nil {
 				result := map[string]interface{}{
@@ -694,14 +709,15 @@ func serviceApp() error {
 				c.JSON(http.StatusOK, result)
 				return
 			}
-
+			txHash := signedTx.Hash().Hex()
+			log.Printf("hash : %s", txHash)
 			result := map[string]interface{}{
 				"status": 1,
 				"data": map[string]interface{}{
 					"token_address": tokenAddressStr,
 					"from_address":  fromAddress.Hex(),
 					"to_address":    toAddressStr,
-					"hash":          signedTx.Hash().Hex(),
+					"hash":          txHash,
 					"amount":        amountFloat,
 				},
 			}
